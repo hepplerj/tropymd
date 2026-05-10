@@ -1,6 +1,6 @@
 'use strict'
 
-// Tropy.md — v0.3.0
+// Tropy.md — v0.4.0
 //
 // Exports each selected Tropy item to its own Markdown file in a chosen
 // directory. Markdown-editor neutral by default — no wiki-links, no opinionated
@@ -129,9 +129,33 @@ function shortHash(item) {
   return crypto.createHash('md5').update(fingerprint).digest('hex').slice(0, 8)
 }
 
-function filenameFor(item, hash) {
-  const slug = slugify(item.title)
-  return slug ? `tropy-${hash}-${slug}.md` : `tropy-${hash}.md`
+function applyFilenamePattern(pattern, vars) {
+  // Substitutes {key} placeholders. Missing/empty values render as empty,
+  // and the result is then cleaned of double-hyphens / leading-trailing
+  // hyphens so a missing piece doesn't leave a stray separator.
+  let out = String(pattern || '').replace(/\{(\w+)\}/g, (_, k) => {
+    const v = vars[k]
+    return v == null ? '' : slugify(v, 1000)
+  })
+  out = out
+    .replace(/-{2,}/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .trim()
+  return out
+}
+
+function filenameFor(item, hash, opts) {
+  const vars = {
+    hash,
+    slug: slugify(item.title),
+    title: slugify(item.title, 1000),
+    date: item.date || '',
+    type: item.type || '',
+    creator: item.creator || ''
+  }
+  const stem = applyFilenamePattern(opts.filenamePattern, vars)
+    || `tropy-${hash}`  // fallback if pattern collapses to empty
+  return `${stem}.md`
 }
 
 function yamlScalar(s) {
@@ -191,13 +215,25 @@ function extractPages(item) {
   // Returns an array of { pageNum, notes } for each photo that has at least
   // one non-empty note. Page numbers are 1-indexed by photo array position
   // (which matches Tropy's "position" — the photo's order within the item).
+  //
+  // Notes attached to selections (rectangular regions on the photo) are
+  // aggregated under their parent photo's page. The plugin doesn't preserve
+  // the visual region — selection notes appear alongside whole-photo notes,
+  // because at the item-level frontmatter layer page-specific entity
+  // tracking isn't useful and the analytical layer downstream is where
+  // finer-grained context goes.
   const photos = Array.isArray(item.photo) ? item.photo : []
   const pages = []
   for (let i = 0; i < photos.length; i++) {
     const photo = photos[i]
-    const notes = Array.isArray(photo.note) ? photo.note : []
+    const photoNotes = Array.isArray(photo.note) ? photo.note : []
+    const selections = Array.isArray(photo.selection) ? photo.selection : []
+    const selectionNotes = []
+    for (const sel of selections) {
+      if (Array.isArray(sel.note)) selectionNotes.push(...sel.note)
+    }
     const rendered = []
-    for (const note of notes) {
+    for (const note of [...photoNotes, ...selectionNotes]) {
       const md = noteToMarkdown(note)
       if (md) rendered.push(md)
     }
@@ -240,6 +276,22 @@ function localName(uri) {
   return m ? m[1] : String(uri)
 }
 
+function looksLikeUri(s) {
+  return /^https?:\/\//.test(String(s))
+}
+
+function ontologyLabel(ontology, uri) {
+  // Returns a human-readable label from Tropy's ontology, or null if no
+  // entry exists. The shape of `state.ontology.props` isn't formally
+  // documented; we look at the most likely keys and gracefully give up
+  // when none are present.
+  const props = ontology && ontology.props
+  if (!props) return null
+  const meta = props[uri]
+  if (!meta) return null
+  return meta.label || meta.title || meta.name || null
+}
+
 function emitYamlValue(lines, key, value) {
   // Emits one YAML key with either a scalar or a list value. Skips empties.
   if (value == null || value === '') return
@@ -278,6 +330,8 @@ function buildFrontmatter(item, hash, opts) {
   // Custom template properties — anything else on the item that isn't
   // structural or already rendered. Lets users with custom Tropy templates
   // see their data without us needing to know each field in advance.
+  // URI-shaped keys are preferentially resolved through Tropy's ontology
+  // for human-readable labels; falls back to the URI's local name.
   const handled = new Set([
     ...STRUCTURAL_KEYS,
     ...RENDERED_EXPLICITLY,
@@ -285,7 +339,11 @@ function buildFrontmatter(item, hash, opts) {
   ])
   for (const key of Object.keys(item)) {
     if (handled.has(key)) continue
-    emitYamlValue(lines, localName(key), item[key])
+    let yamlKey = key
+    if (looksLikeUri(key)) {
+      yamlKey = ontologyLabel(opts.ontology, key) || localName(key)
+    }
+    emitYamlValue(lines, yamlKey, item[key])
   }
 
   // Dispatched entity fields, in declaration order.
@@ -325,31 +383,62 @@ function buildFrontmatter(item, hash, opts) {
   return lines.join('\n')
 }
 
-function buildBody(item) {
-  // Body is always a single `## Notes` section. When the item has notes on
-  // more than one photo, each photo's notes are preceded by a
-  //     <!-- page N -->
-  // HTML comment so downstream tools (and human readers) can track which
-  // page a piece of analysis came from. Single-page items get no marker.
-  // Users who want a separate "Transcription" section can add it manually.
+function buildBody(item, opts) {
+  // The body is a single `## Notes` section. With multi-page items each
+  // page is preceded by `<!-- page N -->`. With photo embedding enabled,
+  // each page also gets an `![](path)` line for its photo.
+  //
+  // Behavior matrix:
+  //   embedPhotos=false, no notes              -> empty body
+  //   embedPhotos=false, single-page notes     -> ## Notes + content
+  //   embedPhotos=false, multi-page notes      -> ## Notes + page markers
+  //   embedPhotos=true,  any photos            -> ## Notes + per-page
+  //                                                blocks (embed + notes)
+  // Page numbers are 1-indexed by photo array position. Pages with neither
+  // a photo path nor any notes are skipped entirely.
+  const photos = Array.isArray(item.photo) ? item.photo : []
   const pages = extractPages(item)
-  if (pages.length === 0) return '\n'
+  const pagesByNum = new Map(pages.map(p => [p.pageNum, p]))
+
+  if (!opts.embedPhotos) {
+    if (pages.length === 0) return '\n'
+    const parts = ['', '## Notes', '']
+    if (pages.length === 1) {
+      parts.push(pages[0].notes.join('\n\n'))
+    } else {
+      const blocks = pages.map(p =>
+        `<!-- page ${p.pageNum} -->\n\n${p.notes.join('\n\n')}`
+      )
+      parts.push(blocks.join('\n\n'))
+    }
+    parts.push('')
+    return parts.join('\n')
+  }
+
+  // embedPhotos: per-page rendering (photo + that photo's notes if any).
+  if (photos.length === 0 && pages.length === 0) return '\n'
+  const showMarkers = photos.length > 1
+  const blocks = []
+  for (let i = 0; i < photos.length; i++) {
+    const pageNum = i + 1
+    const photo = photos[i]
+    const page = pagesByNum.get(pageNum)
+    const inner = []
+    if (showMarkers) inner.push(`<!-- page ${pageNum} -->`)
+    if (photo && photo.path) inner.push(`![](${photo.path})`)
+    if (page) inner.push(page.notes.join('\n\n'))
+    if (inner.length > 0) blocks.push(inner.join('\n\n'))
+  }
+  if (blocks.length === 0) return '\n'
 
   const parts = ['', '## Notes', '']
-  if (pages.length === 1) {
-    parts.push(pages[0].notes.join('\n\n'))
-  } else {
-    const blocks = pages.map(p =>
-      `<!-- page ${p.pageNum} -->\n\n${p.notes.join('\n\n')}`
-    )
-    parts.push(blocks.join('\n\n'))
-  }
+  parts.push(blocks.join('\n\n'))
   parts.push('')
   return parts.join('\n')
 }
 
 function assembleMarkdown(item, hash, opts) {
-  return buildFrontmatter(item, hash, opts) + '\n' + buildBody(item)
+  return buildFrontmatter(item, hash, opts) + '\n' + buildBody(item, opts)
 }
 
 
@@ -377,6 +466,10 @@ class MarkdownPlugin {
   }
 
   async existingHashes(outDir) {
+    // Reads the `tropy_hash:` value out of each existing .md file's
+    // frontmatter. This is robust to any filename pattern the user has
+    // configured — older versions only checked the filename, which would
+    // miss matches when patterns are customized.
     let files = []
     try {
       files = await fs.readdir(outDir)
@@ -384,22 +477,56 @@ class MarkdownPlugin {
       return new Set()
     }
     const set = new Set()
-    const re = /^tropy-([0-9a-f]{8})-/
+    const HEAD_BYTES = 4096
+    const fmRe = /^---\r?\n([\s\S]*?)\r?\n---/m
+    const hashRe = /^tropy_hash:\s*([0-9a-f]+)/m
     for (const f of files) {
-      const m = f.match(re)
-      if (m) set.add(m[1])
+      if (!f.endsWith('.md')) continue
+      let fh
+      try {
+        fh = await fs.open(path.join(outDir, f), 'r')
+        const buf = Buffer.alloc(HEAD_BYTES)
+        await fh.read(buf, 0, HEAD_BYTES, 0)
+        const head = buf.toString('utf8')
+        const fm = head.match(fmRe)
+        if (fm) {
+          const hm = fm[1].match(hashRe)
+          if (hm) set.add(hm[1])
+        }
+      } catch {
+        // ignore unreadable files
+      } finally {
+        if (fh) await fh.close().catch(() => {})
+      }
     }
     return set
   }
 
   buildOpts() {
+    // Pull Tropy's ontology if available so we can resolve custom-property
+    // URIs to human-readable labels. Older Tropy versions or different
+    // store shapes degrade gracefully — `ontologyLabel` returns null when
+    // a lookup fails.
+    let ontology = null
+    try {
+      const state = this.context.window && this.context.window.store
+        ? this.context.window.store.getState()
+        : null
+      ontology = (state && state.ontology) || null
+    } catch {
+      ontology = null
+    }
+
     return {
       workflowTags: parseCsvSet(this.options.workflowTags),
       includePhotoPaths: this.options.includePhotoPaths !== false,
       skipEmptyNotes: this.options.skipEmptyNotes === true,
       dispatch: parseDispatch(this.options.tagPrefixDispatch),
       wikiLinkEntities: this.options.wikiLinkEntities === true,
-      composeSource: this.options.composeSource !== false
+      composeSource: this.options.composeSource !== false,
+      filenamePattern: this.options.filenamePattern || 'tropy-{hash}-{slug}',
+      embedPhotos: this.options.embedPhotos === true,
+      ontology
     }
   }
 
@@ -450,7 +577,7 @@ class MarkdownPlugin {
           continue
         }
         const md = assembleMarkdown(item, hash, opts)
-        const target = path.join(outDir, filenameFor(item, hash))
+        const target = path.join(outDir, filenameFor(item, hash, opts))
         await fs.writeFile(target, md, 'utf8')
         seen.add(hash)
         wrote++
@@ -474,7 +601,9 @@ MarkdownPlugin.defaults = {
   skipEmptyNotes: false,
   tagPrefixDispatch: '',
   wikiLinkEntities: false,
-  composeSource: true
+  composeSource: true,
+  filenamePattern: 'tropy-{hash}-{slug}',
+  embedPhotos: false
 }
 
 module.exports = MarkdownPlugin
@@ -487,6 +616,7 @@ module.exports._internals = {
   slugify,
   shortHash,
   filenameFor,
+  applyFilenamePattern,
   yamlScalar,
   composeSource,
   htmlToMarkdown,
@@ -495,6 +625,8 @@ module.exports._internals = {
   extractPages,
   extractPhotoPaths,
   localName,
+  looksLikeUri,
+  ontologyLabel,
   buildFrontmatter,
   buildBody,
   assembleMarkdown

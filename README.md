@@ -97,6 +97,59 @@ people:
 
 Has no effect unless tag prefix dispatch is configured.
 
+### Filename pattern
+
+Template for the output filenames (`.md` is appended automatically).
+Default: `tropy-{hash}-{slug}`. Available placeholders:
+
+- `{hash}` — 8-character content hash (drives idempotency)
+- `{slug}` — short slugified title (≤60 chars)
+- `{title}` — full slugified title (no length cap)
+- `{date}` — the item's date as it appears in Tropy
+- `{type}` — the doc type (e.g. `letter`, `newspaper`)
+- `{creator}` — slugified creator name
+
+Missing values collapse cleanly so a missing `{date}` doesn't leave a stray
+hyphen. Idempotency reads the `tropy_hash:` value from existing files'
+frontmatter, so any pattern works without breaking re-runs.
+
+Examples:
+
+| Pattern | Result |
+|---|---|
+| `tropy-{hash}-{slug}` (default) | `tropy-a1b2c3d4-letter-from-pinchot.md` |
+| `{date}-{slug}` | `1907-10-15-letter-from-pinchot.md` |
+| `{type}/{slug}` | `letter/letter-from-pinchot.md` (creates a sub-folder if your editor honors it; the plugin doesn't `mkdir` for you) |
+
+### Embed photos in the body
+
+Off by default. When enabled, each page's notes get an `![](photo path)`
+line above them so editors that render image links inline (Obsidian,
+Logseq, iA Writer) show the scan next to the analysis. Single-photo
+items skip the page marker; multi-photo items get both the marker and
+the embed:
+
+```markdown
+## Notes
+
+<!-- page 1 -->
+
+![](/path/to/scan-001.jpeg)
+
+[notes for page 1]
+
+<!-- page 2 -->
+
+![](/path/to/scan-002.jpeg)
+
+[notes for page 2]
+```
+
+The plugin emits absolute filesystem paths. Some editors (like Obsidian)
+require vault-relative paths or a specific image-loading config — if your
+editor doesn't render the embed, that's a path-resolution issue, not a
+plugin bug.
+
 ### Compose source fields
 
 On by default. When enabled, the standard archival fields (`source`,
@@ -172,10 +225,11 @@ Top-level item properties that aren't recognized as standard archival
 metadata are passed through as YAML fields. If you have a custom Tropy
 template with a `grant-num` field, it'll appear in the frontmatter as
 `grant-num: "..."` rather than getting silently dropped. URI-shaped keys
-(e.g. `http://example.org/grant#num`) get cleaned to their local name
-(`num`) — be aware that this is a local-name heuristic; collisions across
-namespaces are possible. A more rigorous version that reads Tropy's
-ontology is on the roadmap.
+are first looked up in Tropy's ontology — if the property has a label
+defined, the YAML key uses the label (e.g. "Grant Number"). If no label
+is found, the key falls back to the URI's local name. Collisions across
+namespaces are still possible when two distinct URIs share the same
+local name and neither has an ontology label.
 
 ## Idempotency
 
@@ -192,8 +246,9 @@ a re-export of an item, delete its file from the output directory.
 - [x] **v0.2.0** — tag prefix dispatch + wiki-link mode.
 - [x] **v0.3.0** — page markers from photo positions; composable vs separate
   source fields; pass-through of custom template properties.
-- [ ] **v0.4.0** — Tropy ontology integration for fully-labeled custom
-  template fields; selection-attached notes (notes on cropped regions).
+- [x] **v0.4.0** — selection-attached notes; ontology-aware labels for
+  custom template fields; configurable filename pattern; optional photo
+  embedding in the body.
 - [ ] **v1.0.0** — feature-complete, polished docs, stable API.
 
 ## Development

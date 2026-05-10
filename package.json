@@ -1,7 +1,7 @@
 {
   "name": "tropymd",
   "productName": "Tropy.md",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Export Tropy items as Markdown files (one per item) with YAML frontmatter, suitable for Obsidian and other Markdown editors.",
   "icon": "icon.svg",
   "main": "index.js",
@@ -64,6 +64,20 @@
       "label": "Compose source/archive/collection/box/folder into one `source:` field",
       "default": true,
       "hint": "When enabled (default), the standard archival fields are joined into a single `source:` string (e.g., \"Repository, Collection, Box, Folder\"). When disabled, each field is emitted as its own YAML key, matching the structure Tropy templates use."
+    },
+    {
+      "field": "filenamePattern",
+      "type": "string",
+      "label": "Filename pattern",
+      "default": "tropy-{hash}-{slug}",
+      "hint": "Template for output filenames (`.md` is appended). Placeholders: {hash} 8-char content hash, {slug} short title (≤60 chars), {title} full slugified title, {date}, {type}, {creator}. Missing values collapse cleanly. Idempotency reads the `tropy_hash:` value from frontmatter, so any pattern works without breaking re-runs."
+    },
+    {
+      "field": "embedPhotos",
+      "type": "boolean",
+      "label": "Embed photos in the body",
+      "default": false,
+      "hint": "When enabled, each page's notes are preceded by an `![](photo path)` line that embeds the scan image. Useful for editors that render image links inline. Single-photo items skip the page marker; multi-photo items get both the marker and the embed."
     }
   ]
 }
