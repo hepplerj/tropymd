@@ -2,8 +2,12 @@ node_modules/
 *.log
 .DS_Store
 
-# Local install zips — built by the release workflow on tag push.
+# Build artifacts (make zip, make dev-zip).
+build/
+
+# Stray install zips from earlier ad-hoc builds.
 tropymd-v*.zip
+tropymd-dev.zip
 tropy-plugin-markdown-v*.zip
 
 # Local test harness, fixtures, and output. Runs are local-only — fixtures

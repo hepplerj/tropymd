@@ -198,21 +198,68 @@ a re-export of an item, delete its file from the output directory.
 
 ## Development
 
-Clone the repo, then symlink the plugin into Tropy's plugin directory for
-live editing:
+The plugin has no external dependencies and no build step — it's a single
+hand-written `index.js`. A `Makefile` wraps the common operations:
 
 ```sh
-ln -s "$(pwd)" "$HOME/Library/Application Support/Tropy/plugins/tropymd"
+make help        # show all targets
+make zip         # build build/tropymd-vX.Y.Z.zip (release-shaped)
+make dev-zip     # build build/tropymd-dev.zip (installs as 'Tropy.md (dev)')
+make link        # symlink index.js into the installed dev plugin dir
+make unlink      # restore the installed file
+make clean       # remove build/
 ```
 
-(Linux: `~/.config/Tropy/plugins/`. Windows: `%APPDATA%\Tropy\plugins\`.)
+### First-time setup
 
-In Tropy, enable *Preferences → Advanced → Developer mode*, reload the
-project window, and *Developer → Toggle Developer Tools* to see logs and
-inspect state.
+The fastest iteration loop is:
 
-The plugin has no external dependencies and no build step. Just edit
-`index.js` and reload.
+1. **`make dev-zip`** — builds a zip whose `name` and `productName` are
+   suffixed with `-dev`/`(dev)` so it can sit alongside the released
+   plugin without colliding.
+2. In Tropy: *Preferences → Plugins → Install Plugin* → pick
+   `build/tropymd-dev.zip`. The plugins list will now show both
+   "Tropy.md" (the release) and "Tropy.md (dev)" (your working copy).
+3. **`make link`** — replaces the installed `dev/index.js` with a
+   symlink to your repo's `index.js`. (The original gets stashed as
+   `index.js.installed` so `make unlink` can restore it.)
+
+### Iterating
+
+Edit `index.js`, then reload the project window in Tropy
+(*View → Reload* or `Cmd-R` / `Ctrl-R`) and re-run the export. No
+rebuild needed — the symlink picks up your changes immediately.
+
+If you change `package.json` (new options, version bump, etc.), Tropy
+needs a fresh install — re-run `make dev-zip`, uninstall the old "Tropy.md
+(dev)" row, install the new zip, then `make link` again.
+
+(Symlinking the *whole plugin directory* into Tropy's plugins folder
+doesn't work — Tropy needs a real directory it manages. The Makefile's
+`link` target handles this by symlinking individual files inside the
+managed directory.)
+
+### Debugging
+
+Enable *Preferences → Advanced → Developer mode*, then *Developer →
+Toggle Developer Tools*. The plugin's `console.log()` output appears in
+the DevTools console; `this.context.logger.info(...)` lines also land in
+Tropy's `tropy.log` (Help → Show Logs Folder).
+
+You can also evaluate `tropy.state()` in the DevTools console to inspect
+the live ontology, templates, and plugin options.
+
+### Releasing
+
+Bump `version` in `package.json`, commit, then:
+
+```sh
+git tag v$(node -p "require('./package.json').version")
+git push --tags
+```
+
+The GitHub Actions release workflow runs on tag push, builds the install
+zip, and attaches it to a new GitHub Release.
 
 ## License
 
