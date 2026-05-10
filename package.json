@@ -1,0 +1,62 @@
+{
+  "name": "tropymd",
+  "productName": "Tropy.md",
+  "version": "0.2.0",
+  "description": "Export Tropy items as Markdown files (one per item) with YAML frontmatter, suitable for Obsidian and other Markdown editors.",
+  "icon": "icon.svg",
+  "main": "index.js",
+  "license": "MIT",
+  "keywords": [
+    "tropy",
+    "plugin",
+    "markdown",
+    "obsidian",
+    "export"
+  ],
+  "hooks": {
+    "export": true
+  },
+  "options": [
+    {
+      "field": "outputDir",
+      "type": "string",
+      "label": "Output directory",
+      "hint": "Absolute path to the folder where one Markdown file per item will be written. Leave blank to be prompted at export time. Existing files are not overwritten — re-running the export skips items that already have a file with a matching content hash."
+    },
+    {
+      "field": "workflowTags",
+      "type": "string",
+      "label": "Workflow tags to drop (comma-separated)",
+      "default": "to-obsidian,to-process,to-transcribe,in-obsidian",
+      "hint": "Tags in this list are filtered out of the export entirely. Useful for tags you use only as workflow markers (e.g., \"to-obsidian\" to flag items ready for export)."
+    },
+    {
+      "field": "includePhotoPaths",
+      "type": "boolean",
+      "label": "Include photo paths in frontmatter",
+      "default": true,
+      "hint": "Adds a `photos:` field listing each photo's file path. Useful for embedding images in your Markdown notes or linking back from your vault."
+    },
+    {
+      "field": "skipEmptyNotes",
+      "type": "boolean",
+      "label": "Skip items with no notes",
+      "default": false,
+      "hint": "When enabled, items that have no note content are not exported (frontmatter-only files are skipped). Useful when you only care about items where you've added analytical content."
+    },
+    {
+      "field": "tagPrefixDispatch",
+      "type": "string",
+      "label": "Tag prefix dispatch",
+      "default": "",
+      "hint": "Comma-separated list of `prefix/=field` rules. Tags matching a listed prefix are extracted (with the prefix stripped) into the named YAML field; unlisted tags stay in the flat `tags:` list. Use `prefix/` alone to use the prefix as the field name. Two prefixes can route to the same field. Example: `person/=people, place/=locations, org/=organization, gov/=organization, theme/=themes`. Leave blank to disable dispatch entirely."
+    },
+    {
+      "field": "wikiLinkEntities",
+      "type": "boolean",
+      "label": "Wrap dispatched values as [[wiki-links]]",
+      "default": false,
+      "hint": "When enabled, values in dispatched entity fields are wrapped as [[name]] (Obsidian/Roam/Logseq style). When disabled, they're emitted as plain strings. Has no effect unless tag prefix dispatch is configured."
+    }
+  ]
+}

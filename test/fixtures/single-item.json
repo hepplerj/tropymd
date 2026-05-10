@@ -1,0 +1,233 @@
+{
+  "@context": {
+    "@version": 1.1,
+    "@vocab": "https://tropy.org/v1/tropy#",
+    "template": {
+      "@type": "@id"
+    },
+    "photo": {
+      "@id": "https://tropy.org/v1/tropy#photo",
+      "@container": "@list"
+    },
+    "note": {
+      "@id": "https://tropy.org/v1/tropy#note",
+      "@container": "@list"
+    },
+    "selection": {
+      "@id": "https://tropy.org/v1/tropy#selection",
+      "@container": "@list"
+    },
+    "source": "http://purl.org/dc/elements/1.1/source",
+    "title": "http://purl.org/dc/elements/1.1/title",
+    "creator": "http://purl.org/dc/elements/1.1/creator",
+    "date": {
+      "@id": "http://purl.org/dc/elements/1.1/date",
+      "@type": "https://tropy.org/v1/tropy#date"
+    },
+    "type": "http://purl.org/dc/elements/1.1/type",
+    "publisher": "http://purl.org/dc/elements/1.1/publisher"
+  },
+  "@graph": [
+    {
+      "@type": "Item",
+      "template": "https://tropy.org/v1/templates/id#r1wMpxmWf",
+      "source": "American Heritage Center, University of Wyoming",
+      "collection": "James Pissot Papers",
+      "box": "Box 4",
+      "folder": "Folder Sagebrush Rebellion Info",
+      "title": "\"Sagebrush rebellion\" is just another name for a public lands heist",
+      "creator": "Charlie Callison",
+      "date": "1980-03",
+      "type": "newspaper",
+      "publisher": "National Parks & Conservation Magazine",
+      "tag": [
+        "to-process",
+        "to-obsidian",
+        "gov/Bureau of Land Management",
+        "person/Harrison Schmitt",
+        "person/Jake Garn",
+        "person/Paul Laxalt",
+        "person/James McClure",
+        "person/Pete V. Domenici",
+        "place/New Mexico"
+      ],
+      "photo": [
+        {
+          "@type": "Photo",
+          "checksum": "92f07b26519554b9e40d9ce6cdb165bc",
+          "color": "rgb(184,184,184,1)",
+          "density": null,
+          "filename": "IMG_8646.jpeg",
+          "mimetype": "image/jpeg",
+          "orientation": 1,
+          "page": 0,
+          "path": "/Users/jheppler/Library/CloudStorage/Dropbox/10-19 Academia/10.02 Research/10.03 Sagebrush/American Heritage Center/James Pissot Papers/Box 4/Folder Sagebrush Rebellion Info/IMG_8646.jpeg",
+          "protocol": "file",
+          "size": 843860,
+          "template": "https://tropy.org/v1/templates/photo",
+          "angle": 0,
+          "brightness": 0,
+          "contrast": 0,
+          "height": 1280,
+          "hue": 0,
+          "mirror": false,
+          "negative": false,
+          "saturation": 0,
+          "sharpen": 0,
+          "width": 960,
+          "title": "IMG_8646",
+          "date": 1748336377000
+        },
+        {
+          "@type": "Photo",
+          "checksum": "9c48bd27ab7a2b1b17687effb1bf2fca",
+          "color": "rgb(200,200,184,1)",
+          "density": null,
+          "filename": "IMG_8647.jpeg",
+          "mimetype": "image/jpeg",
+          "orientation": 1,
+          "page": 0,
+          "path": "/Users/jheppler/Library/CloudStorage/Dropbox/10-19 Academia/10.02 Research/10.03 Sagebrush/American Heritage Center/James Pissot Papers/Box 4/Folder Sagebrush Rebellion Info/IMG_8647.jpeg",
+          "protocol": "file",
+          "size": 922889,
+          "template": "https://tropy.org/v1/templates/photo",
+          "angle": 0,
+          "brightness": 0,
+          "contrast": 0,
+          "height": 1280,
+          "hue": 0,
+          "mirror": false,
+          "negative": false,
+          "saturation": 0,
+          "sharpen": 0,
+          "width": 960,
+          "title": "IMG_8647",
+          "date": 1748336382000
+        },
+        {
+          "@type": "Photo",
+          "checksum": "c4401fff465a1c4edc63d623cd79cf75",
+          "color": "rgb(184,184,168,1)",
+          "density": null,
+          "filename": "IMG_8648.jpeg",
+          "mimetype": "image/jpeg",
+          "orientation": 1,
+          "page": 0,
+          "path": "/Users/jheppler/Library/CloudStorage/Dropbox/10-19 Academia/10.02 Research/10.03 Sagebrush/American Heritage Center/James Pissot Papers/Box 4/Folder Sagebrush Rebellion Info/IMG_8648.jpeg",
+          "protocol": "file",
+          "size": 959227,
+          "template": "https://tropy.org/v1/templates/photo",
+          "angle": 0,
+          "brightness": 0,
+          "contrast": 0,
+          "height": 1280,
+          "hue": 0,
+          "mirror": false,
+          "negative": false,
+          "saturation": 0,
+          "sharpen": 0,
+          "width": 960,
+          "title": "IMG_8648",
+          "date": 1748336386000,
+          "note": [
+            {
+              "@type": "Note",
+              "text": {
+                "@value": "No unreserved unappropriated public lands conveyed to any state pursuant to this act shall be conveyed, transferred, or otherwise disposed of except pursuant to the specific authority of a state law enacted on or after the date on which such state acquired such lands pursuant to this act.",
+                "@language": "en"
+              },
+              "html": {
+                "@value": "<p>No unreserved unappropriated public lands conveyed to any state pursuant to this act shall be conveyed, transferred, or otherwise disposed of except pursuant to the specific authority of a state law enacted on or after the date on which such state acquired such lands pursuant to this act.</p>",
+                "@language": "en"
+              }
+            },
+            {
+              "@type": "Note",
+              "text": {
+                "@value": "Hatch: “My bill is designed to return control of our destiny to the people of Utah by transferring title to the unappropriated public lands to the state capital and, from there, to the county authorities and, ultimately, to private citizens.” (12)",
+                "@language": "en"
+              },
+              "html": {
+                "@value": "<p>Hatch:&nbsp;“My bill is designed to return control of our destiny to the people of Utah by transferring title to the unappropriated public lands to the state capital and, from there, to the county authorities and, ultimately, to private citizens.” (12)</p>",
+                "@language": "en"
+              }
+            },
+            {
+              "@type": "Note",
+              "text": {
+                "@value": "DeVoto reporting on mcCarran that he “succeeded in getting the Grazing Service merged with the General Land Office to form the Bureau of Land Management. Then he got the new agency’s appropriations reduced to the point where it was administratively impotent, a captive of the stockmen it was suppose to regulate.”",
+                "@language": "en"
+              },
+              "html": {
+                "@value": "<p>DeVoto reporting on mcCarran that he&nbsp;“succeeded in getting the Grazing Service merged with the General Land Office to form the Bureau of Land Management. Then he got the new agency’s appropriations reduced to the point where it was administratively impotent, a captive of the stockmen it was suppose to regulate.”</p>",
+                "@language": "en"
+              }
+            },
+            {
+              "@type": "Note",
+              "text": {
+                "@value": "Callison calls the Newsweek Angry West story filled with “so many factual errors and selective quotes that it amounted to a travesty of the profession of journalism.” (12)",
+                "@language": "en"
+              },
+              "html": {
+                "@value": "<p>Callison calls the Newsweek Angry West story filled with&nbsp;“so many factual errors and selective quotes that it amounted to a travesty of the profession of journalism.” (12)</p>",
+                "@language": "en"
+              }
+            }
+          ]
+        },
+        {
+          "@type": "Photo",
+          "checksum": "def318e21903f2a8852b5d97153df329",
+          "color": "rgb(184,184,168,1)",
+          "density": null,
+          "filename": "IMG_8649.jpeg",
+          "mimetype": "image/jpeg",
+          "orientation": 1,
+          "page": 0,
+          "path": "/Users/jheppler/Library/CloudStorage/Dropbox/10-19 Academia/10.02 Research/10.03 Sagebrush/American Heritage Center/James Pissot Papers/Box 4/Folder Sagebrush Rebellion Info/IMG_8649.jpeg",
+          "protocol": "file",
+          "size": 967548,
+          "template": "https://tropy.org/v1/templates/photo",
+          "angle": 270,
+          "brightness": 0,
+          "contrast": 0,
+          "height": 960,
+          "hue": 0,
+          "mirror": false,
+          "negative": false,
+          "saturation": 0,
+          "sharpen": 0,
+          "width": 1280,
+          "title": "IMG_8649",
+          "date": 1748336391000,
+          "note": [
+            {
+              "@type": "Note",
+              "text": {
+                "@value": "public land historian Bob Stewart – look this up",
+                "@language": "en"
+              },
+              "html": {
+                "@value": "<p>public land historian Bob Stewart – look this up</p>",
+                "@language": "en"
+              }
+            },
+            {
+              "@type": "Note",
+              "text": {
+                "@value": "California attempted to pass its own sagebrush legislation but Jerry Brown vetoed the bill on Sept 20 1979.",
+                "@language": "en"
+              },
+              "html": {
+                "@value": "<p>California attempted to pass its own sagebrush legislation but Jerry Brown vetoed the bill on Sept 20 1979.</p>",
+                "@language": "en"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "version": "1.17.3"
+}

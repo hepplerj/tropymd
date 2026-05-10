@@ -1,0 +1,39 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*.*'
+
+env:
+  PLUGIN_NAME: tropymd
+
+jobs:
+  create-release:
+    name: Create release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Resolve artifact name
+        id: meta
+        run: echo "artifact=${PLUGIN_NAME}-${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Build install zip
+        run: |
+          mkdir "${{ steps.meta.outputs.artifact }}"
+          cp index.js package.json icon.svg LICENSE README.md \
+            "${{ steps.meta.outputs.artifact }}/"
+          zip -r "${{ steps.meta.outputs.artifact }}.zip" \
+            "${{ steps.meta.outputs.artifact }}"
+
+      - name: Create release and upload zip
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: ${{ steps.meta.outputs.artifact }}.zip
+          prerelease: true
+          generateReleaseNotes: true
+          token: ${{ secrets.GITHUB_TOKEN }}

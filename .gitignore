@@ -1,0 +1,10 @@
+node_modules/
+*.log
+.DS_Store
+
+# Local install zips — built by the release workflow on tag push.
+tropymd-v*.zip
+tropy-plugin-markdown-v*.zip
+
+# Test harness output
+test/out/
