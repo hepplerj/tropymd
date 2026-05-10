@@ -6,5 +6,6 @@ node_modules/
 tropymd-v*.zip
 tropy-plugin-markdown-v*.zip
 
-# Test harness output
-test/out/
+# Local test harness, fixtures, and output. Runs are local-only — fixtures
+# can contain real research material and are not committed.
+test/

@@ -1,6 +1,6 @@
 'use strict'
 
-// Tropy.md — v0.2.0
+// Tropy.md — v0.3.0
 //
 // Exports each selected Tropy item to its own Markdown file in a chosen
 // directory. Markdown-editor neutral by default — no wiki-links, no opinionated
@@ -181,15 +181,31 @@ function noteToMarkdown(note) {
 
 function extractNotes(item) {
   const out = []
-  const photos = Array.isArray(item.photo) ? item.photo : []
-  for (const photo of photos) {
-    const notes = Array.isArray(photo.note) ? photo.note : []
-    for (const note of notes) {
-      const md = noteToMarkdown(note)
-      if (md) out.push(md)
-    }
+  for (const page of extractPages(item)) {
+    out.push(...page.notes)
   }
   return out
+}
+
+function extractPages(item) {
+  // Returns an array of { pageNum, notes } for each photo that has at least
+  // one non-empty note. Page numbers are 1-indexed by photo array position
+  // (which matches Tropy's "position" — the photo's order within the item).
+  const photos = Array.isArray(item.photo) ? item.photo : []
+  const pages = []
+  for (let i = 0; i < photos.length; i++) {
+    const photo = photos[i]
+    const notes = Array.isArray(photo.note) ? photo.note : []
+    const rendered = []
+    for (const note of notes) {
+      const md = noteToMarkdown(note)
+      if (md) rendered.push(md)
+    }
+    if (rendered.length > 0) {
+      pages.push({ pageNum: i + 1, notes: rendered })
+    }
+  }
+  return pages
 }
 
 function extractPhotoPaths(item) {
@@ -199,6 +215,42 @@ function extractPhotoPaths(item) {
 
 
 // ----- assembly -------------------------------------------------------------
+
+// Top-level keys in the JSON-LD item that are structural — not user data and
+// never emitted as YAML fields.
+const STRUCTURAL_KEYS = new Set([
+  '@type', '@context', '@id',
+  'template', 'photo', 'note', 'selection', 'tag'
+])
+
+// Top-level keys this plugin renders explicitly into named YAML fields.
+const RENDERED_EXPLICITLY = new Set([
+  'title', 'creator', 'publisher', 'date', 'type'
+])
+
+// Keys that participate in source composition. When composeSource is true,
+// these are merged into the single `source:` field. When false, each is
+// emitted as its own YAML field.
+const SOURCE_PARTS = ['source', 'archive', 'collection', 'box', 'folder']
+
+function localName(uri) {
+  // For URI-shaped keys like http://example.org/grant#number, return `number`.
+  // For non-URI keys, return as-is.
+  const m = String(uri).match(/[#/]([^#/]+)\/?$/)
+  return m ? m[1] : String(uri)
+}
+
+function emitYamlValue(lines, key, value) {
+  // Emits one YAML key with either a scalar or a list value. Skips empties.
+  if (value == null || value === '') return
+  if (Array.isArray(value)) {
+    if (value.length === 0) return
+    lines.push(`${key}:`)
+    for (const v of value) lines.push(`  - ${yamlScalar(v)}`)
+  } else {
+    lines.push(`${key}: ${yamlScalar(value)}`)
+  }
+}
 
 function buildFrontmatter(item, hash, opts) {
   const allTags = (Array.isArray(item.tag) ? item.tag : [])
@@ -212,8 +264,29 @@ function buildFrontmatter(item, hash, opts) {
   if (item.publisher) lines.push(`publication: ${yamlScalar(item.publisher)}`)
   if (item.date) lines.push(`date: ${yamlScalar(item.date)}`)
   if (item.type) lines.push(`doc_type: ${yamlScalar(item.type)}`)
-  const source = composeSource(item)
-  if (source) lines.push(`source: ${yamlScalar(source)}`)
+
+  // Source: either composed into one string, or emitted as separate fields.
+  if (opts.composeSource) {
+    const source = composeSource(item)
+    if (source) lines.push(`source: ${yamlScalar(source)}`)
+  } else {
+    for (const part of SOURCE_PARTS) {
+      if (item[part]) lines.push(`${part}: ${yamlScalar(item[part])}`)
+    }
+  }
+
+  // Custom template properties — anything else on the item that isn't
+  // structural or already rendered. Lets users with custom Tropy templates
+  // see their data without us needing to know each field in advance.
+  const handled = new Set([
+    ...STRUCTURAL_KEYS,
+    ...RENDERED_EXPLICITLY,
+    ...SOURCE_PARTS
+  ])
+  for (const key of Object.keys(item)) {
+    if (handled.has(key)) continue
+    emitYamlValue(lines, localName(key), item[key])
+  }
 
   // Dispatched entity fields, in declaration order.
   for (const field of fieldOrder) {
@@ -252,14 +325,31 @@ function buildFrontmatter(item, hash, opts) {
   return lines.join('\n')
 }
 
-function buildBody(notes) {
-  if (notes.length === 0) return '\n'
-  return '\n## Notes\n\n' + notes.join('\n\n') + '\n'
+function buildBody(item) {
+  // Body is always a single `## Notes` section. When the item has notes on
+  // more than one photo, each photo's notes are preceded by a
+  //     <!-- page N -->
+  // HTML comment so downstream tools (and human readers) can track which
+  // page a piece of analysis came from. Single-page items get no marker.
+  // Users who want a separate "Transcription" section can add it manually.
+  const pages = extractPages(item)
+  if (pages.length === 0) return '\n'
+
+  const parts = ['', '## Notes', '']
+  if (pages.length === 1) {
+    parts.push(pages[0].notes.join('\n\n'))
+  } else {
+    const blocks = pages.map(p =>
+      `<!-- page ${p.pageNum} -->\n\n${p.notes.join('\n\n')}`
+    )
+    parts.push(blocks.join('\n\n'))
+  }
+  parts.push('')
+  return parts.join('\n')
 }
 
 function assembleMarkdown(item, hash, opts) {
-  const notes = extractNotes(item)
-  return buildFrontmatter(item, hash, opts) + '\n' + buildBody(notes)
+  return buildFrontmatter(item, hash, opts) + '\n' + buildBody(item)
 }
 
 
@@ -308,7 +398,8 @@ class MarkdownPlugin {
       includePhotoPaths: this.options.includePhotoPaths !== false,
       skipEmptyNotes: this.options.skipEmptyNotes === true,
       dispatch: parseDispatch(this.options.tagPrefixDispatch),
-      wikiLinkEntities: this.options.wikiLinkEntities === true
+      wikiLinkEntities: this.options.wikiLinkEntities === true,
+      composeSource: this.options.composeSource !== false
     }
   }
 
@@ -382,7 +473,8 @@ MarkdownPlugin.defaults = {
   includePhotoPaths: true,
   skipEmptyNotes: false,
   tagPrefixDispatch: '',
-  wikiLinkEntities: false
+  wikiLinkEntities: false,
+  composeSource: true
 }
 
 module.exports = MarkdownPlugin
@@ -400,7 +492,9 @@ module.exports._internals = {
   htmlToMarkdown,
   noteToMarkdown,
   extractNotes,
+  extractPages,
   extractPhotoPaths,
+  localName,
   buildFrontmatter,
   buildBody,
   assembleMarkdown

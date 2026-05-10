@@ -1,7 +1,7 @@
 {
   "name": "tropymd",
   "productName": "Tropy.md",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Export Tropy items as Markdown files (one per item) with YAML frontmatter, suitable for Obsidian and other Markdown editors.",
   "icon": "icon.svg",
   "main": "index.js",
@@ -57,6 +57,13 @@
       "label": "Wrap dispatched values as [[wiki-links]]",
       "default": false,
       "hint": "When enabled, values in dispatched entity fields are wrapped as [[name]] (Obsidian/Roam/Logseq style). When disabled, they're emitted as plain strings. Has no effect unless tag prefix dispatch is configured."
+    },
+    {
+      "field": "composeSource",
+      "type": "boolean",
+      "label": "Compose source/archive/collection/box/folder into one `source:` field",
+      "default": true,
+      "hint": "When enabled (default), the standard archival fields are joined into a single `source:` string (e.g., \"Repository, Collection, Box, Folder\"). When disabled, each field is emitted as its own YAML key, matching the structure Tropy templates use."
     }
   ]
 }

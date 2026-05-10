@@ -71,10 +71,10 @@ remain in the flat `tags:` list — there's no surprise dispatch.
 person/=people, place/=locations, org/=organization, gov/=organization, theme/=themes, legislation/=legislation, event/=events
 ```
 
-**Result:** a Tropy tag like `person/Charlie Callison` lands in
-`people: ["Charlie Callison"]` instead of `tags: ["person/Charlie Callison"]`.
-Both `org/Sierra Club` and `gov/Bureau of Land Management` route into the
-shared `organization:` field.
+**Result:** a Tropy tag like `person/Theodore Roosevelt` lands in
+`people: ["Theodore Roosevelt"]` instead of
+`tags: ["person/Theodore Roosevelt"]`. Both `org/Sierra Club` and
+`gov/U.S. Forest Service` route into the shared `organization:` field.
 
 Default: empty (no dispatch — all tags stay in `tags:`).
 
@@ -85,17 +85,42 @@ Off by default. When enabled, dispatched entity values are wrapped as
 
 ```yaml
 people:
-  - "[[Charlie Callison]]"
+  - "[[Theodore Roosevelt]]"
 ```
 
 When off, plain strings:
 
 ```yaml
 people:
-  - "Charlie Callison"
+  - "Theodore Roosevelt"
 ```
 
 Has no effect unless tag prefix dispatch is configured.
+
+### Compose source fields
+
+On by default. When enabled, the standard archival fields (`source`,
+`archive`, `collection`, `box`, `folder`) are joined into a single
+`source:` string in the order *Repository, Archive, Collection, Box,
+Folder*, skipping empty parts. When disabled, each field is emitted as
+its own YAML key — closer to how Tropy templates structure them, and
+useful if your downstream tooling (e.g. Obsidian Dataview) prefers
+querying individual archival fields.
+
+Composed (default):
+
+```yaml
+source: "Library of Congress, Gifford Pinchot Papers, Box 12, Folder 3"
+```
+
+Separate:
+
+```yaml
+source: "Library of Congress"
+collection: "Gifford Pinchot Papers"
+box: "Box 12"
+folder: "Folder 3"
+```
 
 ## Output shape
 
@@ -104,32 +129,53 @@ configured):
 
 ```markdown
 ---
-title: "Letter from Brandborg to Smith"
-creator: "Stewart M. Brandborg"
+title: "Letter from Pinchot to Roosevelt"
+creator: "Gifford Pinchot"
 publication: ""
-date: "1973-10-31"
+date: "1907-10-15"
 doc_type: "letter"
-source: "Denver Public Library, Wilderness Society Records, Box 44, Folder 3"
+source: "Library of Congress, Gifford Pinchot Papers, Box 12, Folder 3"
 people:
-  - "[[Stewart M. Brandborg]]"
+  - "[[Gifford Pinchot]]"
+  - "[[Theodore Roosevelt]]"
 locations: []
 organization:
-  - "[[Wilderness Society]]"
+  - "[[U.S. Forest Service]]"
 themes:
-  - "[[federal land management]]"
+  - "[[conservation]]"
 tags: []
 photos:
   - "/path/to/scan-001.jpeg"
+  - "/path/to/scan-002.jpeg"
 tropy_hash: a1b2c3d4
 ---
 
 ## Notes
 
-[note content here, joined with blank lines if multiple notes]
+<!-- page 1 -->
+
+[notes attached to the first photo]
+
+<!-- page 2 -->
+
+[notes attached to the second photo]
 ```
 
-Items with no notes get the same frontmatter and an empty body (unless
-*Skip items with no notes* is enabled).
+Items with notes on a single photo (or no photo at all) skip the
+`<!-- page N -->` markers — those only appear when an item has notes
+spanning multiple photos. Items with no notes get the same frontmatter
+and an empty body, unless *Skip items with no notes* is enabled.
+
+### Custom template fields
+
+Top-level item properties that aren't recognized as standard archival
+metadata are passed through as YAML fields. If you have a custom Tropy
+template with a `grant-num` field, it'll appear in the frontmatter as
+`grant-num: "..."` rather than getting silently dropped. URI-shaped keys
+(e.g. `http://example.org/grant#num`) get cleaned to their local name
+(`num`) — be aware that this is a local-name heuristic; collisions across
+namespaces are possible. A more rigorous version that reads Tropy's
+ontology is on the roadmap.
 
 ## Idempotency
 
@@ -144,8 +190,10 @@ a re-export of an item, delete its file from the output directory.
 - [x] **v0.1.x** — per-item Markdown, content-hash idempotency, configurable
   workflow tags, photo paths, skip-empty toggle.
 - [x] **v0.2.0** — tag prefix dispatch + wiki-link mode.
-- [ ] **v0.3.0** — page markers from photo positions; `## Notes` /
-  `## Transcription` body sections detected via leading bold headers.
+- [x] **v0.3.0** — page markers from photo positions; composable vs separate
+  source fields; pass-through of custom template properties.
+- [ ] **v0.4.0** — Tropy ontology integration for fully-labeled custom
+  template fields; selection-attached notes (notes on cropped regions).
 - [ ] **v1.0.0** — feature-complete, polished docs, stable API.
 
 ## Development
@@ -164,13 +212,7 @@ project window, and *Developer → Toggle Developer Tools* to see logs and
 inspect state.
 
 The plugin has no external dependencies and no build step. Just edit
-`index.js` and reload. To run the test harness against fixtures without
-Tropy:
-
-```sh
-node test/run.js                                   # default fixture
-node test/run.js test/fixtures/multi-note-item.json /tmp/out
-```
+`index.js` and reload.
 
 ## License
 
