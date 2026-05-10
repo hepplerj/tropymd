@@ -153,32 +153,47 @@ plugin bug.
 ### Field rename
 
 Comma-separated `from=to` rules that rename top-level YAML field names.
-Useful for matching the conventions of whatever Markdown vault you're
-exporting into. Default: empty (no renames).
+Default: empty (no renames). Each rule can optionally be scoped to
+specific doc types with an `@type|type|...` suffix; rules without a
+scope apply to every exported item.
 
-The most common case: Tropy's correspondence template stores the
-recipient as `dc:audience`, which the plugin emits as `audience:` by
-default. If your convention is `recipient:`, configure:
-
-```
-audience=recipient
-```
-
-Other examples:
+**The motivating case — correspondence.** Tropy's correspondence
+template stores the recipient as `dc:audience` (which the plugin emits
+as `audience:`) and the author as `dc:creator` (emitted as `creator:`).
+Your Obsidian convention might be `author:` and `recipient:` — but only
+*for letters and similar correspondence*. On a newspaper article,
+`creator:` should stay as `creator:`. Scoping handles this:
 
 ```
-creator=author, audience=recipient
+creator=author@letter|memorandum|telegram,
+audience=recipient@letter|memorandum|telegram
+```
+
+Now `creator → author` only applies when `doc_type` is `letter`,
+`memorandum`, or `telegram`; on newspaper or generic-document items,
+`creator:` stays as `creator:`.
+
+**Unscoped rules — apply everywhere.** If you want `publication:` renamed
+to `published-in:` regardless of doc type, drop the scope:
+
+```
 publication=published-in
-photos=attachments
 ```
 
-The rule applies to standard frontmatter fields (`title`, `creator`,
-`publication`, `date`, `doc_type`, `source`, `archive`, `collection`,
-`box`, `folder`, `tags`, `photos`) and to custom template properties
-that flow through the passthrough. It does **not** apply to
-tag-dispatched entity fields — use the Tag prefix dispatch setting to
-name those. The internal `tropy_hash:` field is also non-renamable, since
-idempotency depends on it.
+**Combining the two.** A single config line can mix scoped and unscoped
+rules:
+
+```
+creator=author@letter|memorandum|telegram, audience=recipient@letter|memorandum|telegram, publication=published-in
+```
+
+**What the rule applies to:** standard frontmatter fields (`title`,
+`creator`, `publication`, `date`, `doc_type`, `source`, `archive`,
+`collection`, `box`, `folder`, `tags`, `photos`) and any custom
+template properties that flow through the passthrough. It does **not**
+apply to tag-dispatched entity fields — use the Tag prefix dispatch
+setting to name those. The internal `tropy_hash:` field is also
+non-renamable, since idempotency depends on it.
 
 ### Compose source fields
 
@@ -281,6 +296,8 @@ a re-export of an item, delete its file from the output directory.
   embedding in the body.
 - [x] **v1.0.0** — field rename support; documentation polish; first
   stable release.
+- [x] **v1.1.0** — doc-type-scoped field rename rules
+  (e.g. `creator=author@letter|memorandum|telegram`).
 
 ## Development
 

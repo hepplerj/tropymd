@@ -1,6 +1,6 @@
 'use strict'
 
-// Tropy.md — v1.0.0
+// Tropy.md — v1.1.0
 //
 // Exports each selected Tropy item to its own Markdown file in a chosen
 // directory. Markdown-editor neutral by default — no wiki-links, no opinionated
@@ -27,18 +27,21 @@ function parseCsvSet(s) {
 }
 
 function parseFieldRename(s) {
-  // Parses the fieldRename config into a Map<from, to>.
+  // Parses the fieldRename config into a Map<from, { to, types }>.
   //
-  // Format: comma-separated `from=to` pairs. The keys are the YAML field
-  // names the plugin would have written by default; the values are the
-  // names to use instead. Example:
+  // Format: comma-separated `from=to` pairs, with an optional doc-type
+  // scope per rule introduced by `@`. Multiple types in the scope are
+  // separated by `|` (since comma is the rule separator). Example:
   //
-  //   creator=author, audience=recipient, publication=published-in
+  //   creator=author@letter|memorandum|telegram,
+  //   audience=recipient@letter|memorandum|telegram,
+  //   publication=published-in
   //
-  // Useful for matching downstream conventions (e.g. Tropy stores
-  // correspondence "recipient" as dc:audience, which the plugin emits
-  // through its passthrough as `audience:` — users who want `recipient:`
-  // map it explicitly here).
+  // A rule with no `@` applies to every item; a rule with `@` applies
+  // only when the item's `doc_type` matches one of the listed types.
+  // The motivating case is correspondence: dc:creator semantically means
+  // "author" only on letters/memos/telegrams, not on newspaper articles
+  // — the scope keeps a rename from leaking across doc types.
   const map = new Map()
   for (const entry of String(s || '').split(',')) {
     const trimmed = entry.trim()
@@ -46,15 +49,33 @@ function parseFieldRename(s) {
     const eq = trimmed.indexOf('=')
     if (eq < 0) continue
     const from = trimmed.slice(0, eq).trim()
-    const to = trimmed.slice(eq + 1).trim()
-    if (from && to) map.set(from, to)
+    let value = trimmed.slice(eq + 1).trim()
+    let types = null
+    const at = value.lastIndexOf('@')
+    if (at >= 0) {
+      const list = value.slice(at + 1)
+      value = value.slice(0, at).trim()
+      const parts = list.split('|')
+        .map(t => t.trim().toLowerCase())
+        .filter(Boolean)
+      if (parts.length > 0) types = new Set(parts)
+    }
+    if (from && value) map.set(from, { to: value, types })
   }
   return map
 }
 
-function renameYamlKey(opts, key) {
+function renameYamlKey(opts, key, item) {
+  // Returns the renamed YAML key, or the original key if no rule applies.
+  // `item` is consulted to satisfy any doc-type scope on the matching rule.
   if (!opts.fieldRename) return key
-  return opts.fieldRename.get(key) || key
+  const rule = opts.fieldRename.get(key)
+  if (!rule) return key
+  if (rule.types) {
+    const docType = String((item && item.type) || '').toLowerCase()
+    if (!rule.types.has(docType)) return key
+  }
+  return rule.to
 }
 
 function parseDispatch(s) {
@@ -343,10 +364,12 @@ function buildFrontmatter(item, hash, opts) {
 
   // Helper to keep emit sites readable. fieldRename is consulted at every
   // YAML-key emission so users can match any downstream convention. The
-  // internal `tropy_hash:` and dispatched entity fields are intentionally
-  // not renamable — the former because idempotency depends on it, the
-  // latter because tagPrefixDispatch already names those fields directly.
-  const k = name => renameYamlKey(opts, name)
+  // helper closes over `item` so doc-type-scoped rules (e.g. only rename
+  // `creator` for letters) can do the right thing. The internal
+  // `tropy_hash:` and dispatched entity fields are intentionally not
+  // renamable — the former because idempotency depends on it, the latter
+  // because tagPrefixDispatch already names those fields directly.
+  const k = name => renameYamlKey(opts, name, item)
 
   const lines = ['---']
   lines.push(`${k('title')}: ${yamlScalar(item.title)}`)

@@ -1,7 +1,7 @@
 {
   "name": "tropymd",
   "productName": "Tropy.md",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Export Tropy items as Markdown files (one per item) with YAML frontmatter, suitable for Obsidian and other Markdown editors.",
   "icon": "icon.svg",
   "main": "index.js",
@@ -93,7 +93,7 @@
       "type": "string",
       "label": "Field rename (frontmatter keys)",
       "default": "",
-      "hint": "Comma-separated `from=to` rules that rename top-level YAML field names. Useful for matching downstream conventions — e.g. correspondence items use `dc:audience` for the recipient, which the plugin emits as `audience:` by default; configure `audience=recipient` to land it in your conventional `recipient:` field. Apply equally to the standard fields (creator, publication, date, doc_type, source, archive, collection, box, folder, tags, photos) and any custom template properties that pass through. Tag-dispatched entity fields are unaffected — use the Tag prefix dispatch setting to name those."
+      "hint": "Comma-separated `from=to` rules that rename top-level YAML field names. Optionally scope a rule to specific doc types with `@type|type` (pipe-separated). Without a scope, the rule applies to every item. Example: `creator=author@letter|memorandum|telegram, audience=recipient@letter|memorandum|telegram, publication=published-in` renames creator → author and audience → recipient only on correspondence-type items, but always renames publication → published-in. Applies to the standard fields (creator, publication, date, doc_type, source, archive, collection, box, folder, tags, photos) and any custom template properties that pass through. Tag-dispatched entity fields are unaffected — use the Tag prefix dispatch setting to name those."
     }
   ]
 }
