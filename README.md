@@ -150,6 +150,36 @@ require vault-relative paths or a specific image-loading config — if your
 editor doesn't render the embed, that's a path-resolution issue, not a
 plugin bug.
 
+### Field rename
+
+Comma-separated `from=to` rules that rename top-level YAML field names.
+Useful for matching the conventions of whatever Markdown vault you're
+exporting into. Default: empty (no renames).
+
+The most common case: Tropy's correspondence template stores the
+recipient as `dc:audience`, which the plugin emits as `audience:` by
+default. If your convention is `recipient:`, configure:
+
+```
+audience=recipient
+```
+
+Other examples:
+
+```
+creator=author, audience=recipient
+publication=published-in
+photos=attachments
+```
+
+The rule applies to standard frontmatter fields (`title`, `creator`,
+`publication`, `date`, `doc_type`, `source`, `archive`, `collection`,
+`box`, `folder`, `tags`, `photos`) and to custom template properties
+that flow through the passthrough. It does **not** apply to
+tag-dispatched entity fields — use the Tag prefix dispatch setting to
+name those. The internal `tropy_hash:` field is also non-renamable, since
+idempotency depends on it.
+
 ### Compose source fields
 
 On by default. When enabled, the standard archival fields (`source`,
@@ -249,7 +279,8 @@ a re-export of an item, delete its file from the output directory.
 - [x] **v0.4.0** — selection-attached notes; ontology-aware labels for
   custom template fields; configurable filename pattern; optional photo
   embedding in the body.
-- [ ] **v1.0.0** — feature-complete, polished docs, stable API.
+- [x] **v1.0.0** — field rename support; documentation polish; first
+  stable release.
 
 ## Development
 

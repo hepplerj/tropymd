@@ -1,6 +1,6 @@
 'use strict'
 
-// Tropy.md — v0.4.0
+// Tropy.md — v1.0.0
 //
 // Exports each selected Tropy item to its own Markdown file in a chosen
 // directory. Markdown-editor neutral by default — no wiki-links, no opinionated
@@ -24,6 +24,37 @@ function parseCsvSet(s) {
   return new Set(
     String(s || '').split(',').map(t => t.trim()).filter(Boolean)
   )
+}
+
+function parseFieldRename(s) {
+  // Parses the fieldRename config into a Map<from, to>.
+  //
+  // Format: comma-separated `from=to` pairs. The keys are the YAML field
+  // names the plugin would have written by default; the values are the
+  // names to use instead. Example:
+  //
+  //   creator=author, audience=recipient, publication=published-in
+  //
+  // Useful for matching downstream conventions (e.g. Tropy stores
+  // correspondence "recipient" as dc:audience, which the plugin emits
+  // through its passthrough as `audience:` — users who want `recipient:`
+  // map it explicitly here).
+  const map = new Map()
+  for (const entry of String(s || '').split(',')) {
+    const trimmed = entry.trim()
+    if (!trimmed) continue
+    const eq = trimmed.indexOf('=')
+    if (eq < 0) continue
+    const from = trimmed.slice(0, eq).trim()
+    const to = trimmed.slice(eq + 1).trim()
+    if (from && to) map.set(from, to)
+  }
+  return map
+}
+
+function renameYamlKey(opts, key) {
+  if (!opts.fieldRename) return key
+  return opts.fieldRename.get(key) || key
 }
 
 function parseDispatch(s) {
@@ -310,20 +341,27 @@ function buildFrontmatter(item, hash, opts) {
 
   const { fields, fieldOrder, leftover } = dispatchTags(allTags, opts.dispatch)
 
+  // Helper to keep emit sites readable. fieldRename is consulted at every
+  // YAML-key emission so users can match any downstream convention. The
+  // internal `tropy_hash:` and dispatched entity fields are intentionally
+  // not renamable — the former because idempotency depends on it, the
+  // latter because tagPrefixDispatch already names those fields directly.
+  const k = name => renameYamlKey(opts, name)
+
   const lines = ['---']
-  lines.push(`title: ${yamlScalar(item.title)}`)
-  if (item.creator) lines.push(`creator: ${yamlScalar(item.creator)}`)
-  if (item.publisher) lines.push(`publication: ${yamlScalar(item.publisher)}`)
-  if (item.date) lines.push(`date: ${yamlScalar(item.date)}`)
-  if (item.type) lines.push(`doc_type: ${yamlScalar(item.type)}`)
+  lines.push(`${k('title')}: ${yamlScalar(item.title)}`)
+  if (item.creator) lines.push(`${k('creator')}: ${yamlScalar(item.creator)}`)
+  if (item.publisher) lines.push(`${k('publication')}: ${yamlScalar(item.publisher)}`)
+  if (item.date) lines.push(`${k('date')}: ${yamlScalar(item.date)}`)
+  if (item.type) lines.push(`${k('doc_type')}: ${yamlScalar(item.type)}`)
 
   // Source: either composed into one string, or emitted as separate fields.
   if (opts.composeSource) {
     const source = composeSource(item)
-    if (source) lines.push(`source: ${yamlScalar(source)}`)
+    if (source) lines.push(`${k('source')}: ${yamlScalar(source)}`)
   } else {
     for (const part of SOURCE_PARTS) {
-      if (item[part]) lines.push(`${part}: ${yamlScalar(item[part])}`)
+      if (item[part]) lines.push(`${k(part)}: ${yamlScalar(item[part])}`)
     }
   }
 
@@ -331,7 +369,8 @@ function buildFrontmatter(item, hash, opts) {
   // structural or already rendered. Lets users with custom Tropy templates
   // see their data without us needing to know each field in advance.
   // URI-shaped keys are preferentially resolved through Tropy's ontology
-  // for human-readable labels; falls back to the URI's local name.
+  // for human-readable labels; falls back to the URI's local name. The
+  // fieldRename map applies on top so users can rename whatever they like.
   const handled = new Set([
     ...STRUCTURAL_KEYS,
     ...RENDERED_EXPLICITLY,
@@ -343,7 +382,7 @@ function buildFrontmatter(item, hash, opts) {
     if (looksLikeUri(key)) {
       yamlKey = ontologyLabel(opts.ontology, key) || localName(key)
     }
-    emitYamlValue(lines, yamlKey, item[key])
+    emitYamlValue(lines, k(yamlKey), item[key])
   }
 
   // Dispatched entity fields, in declaration order.
@@ -362,18 +401,18 @@ function buildFrontmatter(item, hash, opts) {
 
   // Leftover (unmatched) tags as a flat list.
   if (leftover.length === 0) {
-    lines.push('tags: []')
+    lines.push(`${k('tags')}: []`)
   } else {
-    lines.push('tags:')
+    lines.push(`${k('tags')}:`)
     for (const tag of leftover) lines.push(`  - ${yamlScalar(tag)}`)
   }
 
   if (opts.includePhotoPaths) {
     const paths = extractPhotoPaths(item)
     if (paths.length === 0) {
-      lines.push('photos: []')
+      lines.push(`${k('photos')}: []`)
     } else {
-      lines.push('photos:')
+      lines.push(`${k('photos')}:`)
       for (const p of paths) lines.push(`  - ${yamlScalar(p)}`)
     }
   }
@@ -526,6 +565,7 @@ class MarkdownPlugin {
       composeSource: this.options.composeSource !== false,
       filenamePattern: this.options.filenamePattern || 'tropy-{hash}-{slug}',
       embedPhotos: this.options.embedPhotos === true,
+      fieldRename: parseFieldRename(this.options.fieldRename),
       ontology
     }
   }
@@ -603,7 +643,8 @@ MarkdownPlugin.defaults = {
   wikiLinkEntities: false,
   composeSource: true,
   filenamePattern: 'tropy-{hash}-{slug}',
-  embedPhotos: false
+  embedPhotos: false,
+  fieldRename: ''
 }
 
 module.exports = MarkdownPlugin
@@ -612,6 +653,8 @@ module.exports = MarkdownPlugin
 module.exports._internals = {
   parseCsvSet,
   parseDispatch,
+  parseFieldRename,
+  renameYamlKey,
   dispatchTags,
   slugify,
   shortHash,

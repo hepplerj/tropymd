@@ -1,7 +1,7 @@
 {
   "name": "tropymd",
   "productName": "Tropy.md",
-  "version": "0.4.1",
+  "version": "1.0.0",
   "description": "Export Tropy items as Markdown files (one per item) with YAML frontmatter, suitable for Obsidian and other Markdown editors.",
   "icon": "icon.svg",
   "main": "index.js",
@@ -87,6 +87,13 @@
       "label": "Embed photos in the body",
       "default": false,
       "hint": "When enabled, each page's notes are preceded by an `![](photo path)` line that embeds the scan image. Useful for editors that render image links inline. Single-photo items skip the page marker; multi-photo items get both the marker and the embed."
+    },
+    {
+      "field": "fieldRename",
+      "type": "string",
+      "label": "Field rename (frontmatter keys)",
+      "default": "",
+      "hint": "Comma-separated `from=to` rules that rename top-level YAML field names. Useful for matching downstream conventions — e.g. correspondence items use `dc:audience` for the recipient, which the plugin emits as `audience:` by default; configure `audience=recipient` to land it in your conventional `recipient:` field. Apply equally to the standard fields (creator, publication, date, doc_type, source, archive, collection, box, folder, tags, photos) and any custom template properties that pass through. Tag-dispatched entity fields are unaffected — use the Tag prefix dispatch setting to name those."
     }
   ]
 }
