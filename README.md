@@ -18,19 +18,18 @@ content hash) are skipped on subsequent runs.
 ## Usage
 
 1. Select one or more items in Tropy's project view.
-2. *File → Export → Tropy.md*.
+2. *File → Export → tropymd*.
 3. If you didn't pre-configure an output directory, you'll be prompted.
 4. The plugin writes one `tropy-<hash>-<slug>.md` file per item.
 
 ## Configuration
 
-All settings are optional — out of the box, the plugin works without any
-configuration. Click *Settings* on the plugin's row in *Preferences →
-Plugins* to adjust:
+All settings are optional. Out of the box, the plugin works without any
+configuration.
 
 ### Output directory
 
-Absolute path where Markdown files land. Leave blank to be prompted at
+Absolute path where Markdown files are created. Leave blank to be prompted at
 export time.
 
 ### Workflow tags to drop
@@ -43,9 +42,7 @@ notes) goes here.
 ### Include photo paths in frontmatter
 
 When enabled (default), each item's exported file gets a `photos:` YAML
-field listing the absolute path of every photo on the item. Useful for
-embedding images in your Markdown notes (`![](path/to/photo.jpg)`) or
-linking back from your vault to the original scans.
+field listing the absolute path of every photo on the item.
 
 ### Skip items with no notes
 
@@ -55,15 +52,14 @@ haven't analyzed yet).
 
 ### Tag prefix dispatch
 
-The headline opt-in feature. Routes prefixed Tropy tags into named YAML
-frontmatter fields instead of dumping everything into a flat `tags:` list.
-Format is comma-separated, each entry being one of:
+Routes prefixed Tropy tags into named YAML frontmatter fields instead of dumping 
+everything into a flat `tags:` list. Format is comma-separated, each entry being one of:
 
 - `prefix/=field` — explicit field name
 - `prefix/` — uses the prefix (without trailing slash) as the field name
 
 Two prefixes can route to the same field. Tags whose prefix isn't listed
-remain in the flat `tags:` list — there's no surprise dispatch.
+remain in the flat `tags:` list.
 
 **Example config:**
 
@@ -88,14 +84,14 @@ people:
   - "[[Theodore Roosevelt]]"
 ```
 
-When off, plain strings:
+When off, it returns plain strings:
 
 ```yaml
 people:
   - "Theodore Roosevelt"
 ```
 
-Has no effect unless tag prefix dispatch is configured.
+This has no effect unless tag prefix dispatch is configured.
 
 ### Filename pattern
 
@@ -111,7 +107,7 @@ Default: `tropy-{hash}-{slug}`. Available placeholders:
 
 Missing values collapse cleanly so a missing `{date}` doesn't leave a stray
 hyphen. Idempotency reads the `tropy_hash:` value from existing files'
-frontmatter, so any pattern works without breaking re-runs.
+frontmatter, so any pattern works without breaking new exports.
 
 Examples:
 
@@ -119,7 +115,7 @@ Examples:
 |---|---|
 | `tropy-{hash}-{slug}` (default) | `tropy-a1b2c3d4-letter-from-pinchot.md` |
 | `{date}-{slug}` | `1907-10-15-letter-from-pinchot.md` |
-| `{type}/{slug}` | `letter/letter-from-pinchot.md` (creates a sub-folder if your editor honors it; the plugin doesn't `mkdir` for you) |
+| `{type}/{slug}` | `letter/letter-from-pinchot.md` |
 
 ### Embed photos in the body
 
@@ -146,9 +142,7 @@ the embed:
 ```
 
 The plugin emits absolute filesystem paths. Some editors (like Obsidian)
-require vault-relative paths or a specific image-loading config — if your
-editor doesn't render the embed, that's a path-resolution issue, not a
-plugin bug.
+require vault-relative paths or a specific image-loading config.
 
 ### Field rename
 
@@ -157,10 +151,10 @@ Default: empty (no renames). Each rule can optionally be scoped to
 specific doc types with an `@type|type|...` suffix; rules without a
 scope apply to every exported item.
 
-**The motivating case — correspondence.** Tropy's correspondence
+**An example: correspondence.** Tropy's correspondence
 template stores the recipient as `dc:audience` (which the plugin emits
 as `audience:`) and the author as `dc:creator` (emitted as `creator:`).
-Your Obsidian convention might be `author:` and `recipient:` — but only
+Your Obsidian convention, however, might be `author:` and `recipient:` but only
 *for letters and similar correspondence*. On a newspaper article,
 `creator:` should stay as `creator:`. Scoping handles this:
 
@@ -173,7 +167,7 @@ Now `creator → author` only applies when `doc_type` is `letter`,
 `memorandum`, or `telegram`; on newspaper or generic-document items,
 `creator:` stays as `creator:`.
 
-**Unscoped rules — apply everywhere.** If you want `publication:` renamed
+**Unscoped rules apply everywhere.** If you want `publication:` renamed
 to `published-in:` regardless of doc type, drop the scope:
 
 ```
@@ -191,9 +185,9 @@ creator=author@letter|memorandum|telegram, audience=recipient@letter|memorandum|
 `creator`, `publication`, `date`, `doc_type`, `source`, `archive`,
 `collection`, `box`, `folder`, `tags`, `photos`) and any custom
 template properties that flow through the passthrough. It does **not**
-apply to tag-dispatched entity fields — use the Tag prefix dispatch
+apply to tag-dispatched entity fields. Use the Tag prefix dispatch
 setting to name those. The internal `tropy_hash:` field is also
-non-renamable, since idempotency depends on it.
+non-renamable since idempotency depends on it.
 
 ### Compose source fields
 
@@ -201,7 +195,7 @@ On by default. When enabled, the standard archival fields (`source`,
 `archive`, `collection`, `box`, `folder`) are joined into a single
 `source:` string in the order *Repository, Archive, Collection, Box,
 Folder*, skipping empty parts. When disabled, each field is emitted as
-its own YAML key — closer to how Tropy templates structure them, and
+its own YAML key similar to how Tropy templates structure them, and
 useful if your downstream tooling (e.g. Obsidian Dataview) prefers
 querying individual archival fields.
 
@@ -260,9 +254,9 @@ tropy_hash: a1b2c3d4
 ```
 
 Items with notes on a single photo (or no photo at all) skip the
-`<!-- page N -->` markers — those only appear when an item has notes
+`<!-- page N -->` markers. Those only appear when an item has notes
 spanning multiple photos. Items with no notes get the same frontmatter
-and an empty body, unless *Skip items with no notes* is enabled.
+and an empty body, unless *Skip items with no notes* is enabled in the settings.
 
 ### Custom template fields
 
@@ -270,10 +264,10 @@ Top-level item properties that aren't recognized as standard archival
 metadata are passed through as YAML fields. If you have a custom Tropy
 template with a `grant-num` field, it'll appear in the frontmatter as
 `grant-num: "..."` rather than getting silently dropped. URI-shaped keys
-are first looked up in Tropy's ontology — if the property has a label
+are first looked up in Tropy's ontology: if the property has a label
 defined, the YAML key uses the label (e.g. "Grant Number"). If no label
-is found, the key falls back to the URI's local name. Collisions across
-namespaces are still possible when two distinct URIs share the same
+is found, the key falls back to the URI's local name. **Collisions across
+namespaces are still possible** when two distinct URIs share the same
 local name and neither has an ontology label.
 
 ## Idempotency
@@ -284,21 +278,6 @@ hierarchy, photo paths, tags). Re-running the export against the same
 output directory skips items whose hash already appears on disk. To force
 a re-export of an item, delete its file from the output directory.
 
-## Roadmap
-
-- [x] **v0.1.x** — per-item Markdown, content-hash idempotency, configurable
-  workflow tags, photo paths, skip-empty toggle.
-- [x] **v0.2.0** — tag prefix dispatch + wiki-link mode.
-- [x] **v0.3.0** — page markers from photo positions; composable vs separate
-  source fields; pass-through of custom template properties.
-- [x] **v0.4.0** — selection-attached notes; ontology-aware labels for
-  custom template fields; configurable filename pattern; optional photo
-  embedding in the body.
-- [x] **v1.0.0** — field rename support; documentation polish; first
-  stable release.
-- [x] **v1.1.0** — doc-type-scoped field rename rules
-  (e.g. `creator=author@letter|memorandum|telegram`).
-
 ## Development
 
 The plugin has no external dependencies and no build step — it's a single
@@ -306,41 +285,10 @@ hand-written `index.js`. A `Makefile` wraps the common operations:
 
 ```sh
 make help        # show all targets
-make zip         # build build/tropymd-vX.Y.Z.zip (release-shaped)
+make zip         # build build/tropymd-vX.Y.Z.zip (release)
 make dev-zip     # build build/tropymd-dev.zip (installs as 'Tropy.md (dev)')
-make link        # symlink index.js into the installed dev plugin dir
-make unlink      # restore the installed file
 make clean       # remove build/
 ```
-
-### First-time setup
-
-The fastest iteration loop is:
-
-1. **`make dev-zip`** — builds a zip whose `name` and `productName` are
-   suffixed with `-dev`/`(dev)` so it can sit alongside the released
-   plugin without colliding.
-2. In Tropy: *Preferences → Plugins → Install Plugin* → pick
-   `build/tropymd-dev.zip`. The plugins list will now show both
-   "Tropy.md" (the release) and "Tropy.md (dev)" (your working copy).
-3. **`make link`** — replaces the installed `dev/index.js` with a
-   symlink to your repo's `index.js`. (The original gets stashed as
-   `index.js.installed` so `make unlink` can restore it.)
-
-### Iterating
-
-Edit `index.js`, then reload the project window in Tropy
-(*View → Reload* or `Cmd-R` / `Ctrl-R`) and re-run the export. No
-rebuild needed — the symlink picks up your changes immediately.
-
-If you change `package.json` (new options, version bump, etc.), Tropy
-needs a fresh install — re-run `make dev-zip`, uninstall the old "Tropy.md
-(dev)" row, install the new zip, then `make link` again.
-
-(Symlinking the *whole plugin directory* into Tropy's plugins folder
-doesn't work — Tropy needs a real directory it manages. The Makefile's
-`link` target handles this by symlinking individual files inside the
-managed directory.)
 
 ### Debugging
 
@@ -352,18 +300,6 @@ Tropy's `tropy.log` (Help → Show Logs Folder).
 You can also evaluate `tropy.state()` in the DevTools console to inspect
 the live ontology, templates, and plugin options.
 
-### Releasing
-
-Bump `version` in `package.json`, commit, then:
-
-```sh
-git tag v$(node -p "require('./package.json').version")
-git push --tags
-```
-
-The GitHub Actions release workflow runs on tag push, builds the install
-zip, and attaches it to a new GitHub Release.
-
 ## License
 
-MIT — see [LICENSE](LICENSE).
+[MIT LICENSE](LICENSE).
