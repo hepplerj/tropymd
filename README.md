@@ -119,30 +119,31 @@ Examples:
 
 ### Embed photos in the body
 
-Off by default. When enabled, each page's notes get an `![](photo path)`
+Off by default. When enabled, each page's notes get a Markdown embed
 line above them so editors that render image links inline (Obsidian,
-Logseq, iA Writer) show the scan next to the analysis. Single-photo
-items skip the page marker; multi-photo items get both the marker and
-the embed:
+Logseq, iA Writer) show the scan next to the analysis. The embed uses
+the `file:///` URI scheme and angle-bracket form so absolute paths with
+spaces render correctly in Obsidian:
 
 ```markdown
 ## Notes
 
 <!-- page 1 -->
 
-![](/path/to/scan-001.jpeg)
+![IMG_8646](<file:////path/to/scan-001.jpeg>)
 
 [notes for page 1]
 
 <!-- page 2 -->
 
-![](/path/to/scan-002.jpeg)
+![IMG_8647](<file:////path/to/scan-002.jpeg>)
 
 [notes for page 2]
 ```
 
-The plugin emits absolute filesystem paths. Some editors (like Obsidian)
-require vault-relative paths or a specific image-loading config.
+The alt text is the photo's filename without its extension. The plugin
+emits absolute filesystem paths; some editors (like Obsidian) require
+vault-relative paths or a specific image-loading config.
 
 ### Field rename
 

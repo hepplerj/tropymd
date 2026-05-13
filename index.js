@@ -1,6 +1,6 @@
 'use strict'
 
-// Tropy.md — v1.1.0
+// Tropy.md — v1.1.1
 //
 // Exports each selected Tropy item to its own Markdown file in a chosen
 // directory. Markdown-editor neutral by default — no wiki-links, no opinionated
@@ -301,6 +301,23 @@ function extractPhotoPaths(item) {
   return photos.map(p => (p && p.path) || '').filter(Boolean)
 }
 
+function photoEmbedMarkdown(photo) {
+  // Returns a Markdown embed line for a photo, or null if the photo has
+  // no path. Format:
+  //
+  //   ![<filename-stem>](<file:///<absolute path>>)
+  //
+  // The `file:///` URI scheme is what Obsidian (and most editors that
+  // support absolute-path embedding) need to render the image. Angle
+  // brackets around the URL are mandatory because Tropy paths frequently
+  // contain spaces. The filename stem doubles as alt text for editors
+  // that show captions.
+  if (!photo || !photo.path) return null
+  const filename = photo.filename || ''
+  const stem = filename.replace(/\.[^.]+$/, '')
+  return `![${stem}](<file:///${photo.path}>)`
+}
+
 
 // ----- assembly -------------------------------------------------------------
 
@@ -487,7 +504,8 @@ function buildBody(item, opts) {
     const page = pagesByNum.get(pageNum)
     const inner = []
     if (showMarkers) inner.push(`<!-- page ${pageNum} -->`)
-    if (photo && photo.path) inner.push(`![](${photo.path})`)
+    const embed = photoEmbedMarkdown(photo)
+    if (embed) inner.push(embed)
     if (page) inner.push(page.notes.join('\n\n'))
     if (inner.length > 0) blocks.push(inner.join('\n\n'))
   }
@@ -690,6 +708,7 @@ module.exports._internals = {
   extractNotes,
   extractPages,
   extractPhotoPaths,
+  photoEmbedMarkdown,
   localName,
   looksLikeUri,
   ontologyLabel,
