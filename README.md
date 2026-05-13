@@ -99,8 +99,10 @@ Template for the output filenames (`.md` is appended automatically).
 Default: `tropy-{hash}-{slug}`. Available placeholders:
 
 - `{hash}` — 8-character content hash (drives idempotency)
-- `{slug}` — short slugified title (≤60 chars)
+- `{slug}` — short slugified title, lowercase + hyphens (≤60 chars)
 - `{title}` — full slugified title (no length cap)
+- `{name}` — human-readable title: case and spaces preserved, only
+  filesystem-illegal characters (`< > : " / \ | ? *`) stripped
 - `{date}` — the item's date as it appears in Tropy
 - `{type}` — the doc type (e.g. `letter`, `newspaper`)
 - `{creator}` — slugified creator name
@@ -109,11 +111,19 @@ Missing values collapse cleanly so a missing `{date}` doesn't leave a stray
 hyphen. Idempotency reads the `tropy_hash:` value from existing files'
 frontmatter, so any pattern works without breaking new exports.
 
+When two items would produce the same filename — for example two
+articles titled "The Sagebrush Rebellion" from different newspapers,
+both rendered with `{name}` — the second and later get an OS-style
+suffix: `The Sagebrush Rebellion (2).md`, `The Sagebrush Rebellion (3).md`,
+and so on.
+
 Examples:
 
 | Pattern | Result |
 |---|---|
 | `tropy-{hash}-{slug}` (default) | `tropy-a1b2c3d4-letter-from-pinchot.md` |
+| `{name}` | `Letter from Pinchot to Roosevelt.md` |
+| `{date} {name}` | `1907-10-15 Letter from Pinchot to Roosevelt.md` |
 | `{date}-{slug}` | `1907-10-15-letter-from-pinchot.md` |
 | `{type}/{slug}` | `letter/letter-from-pinchot.md` |
 

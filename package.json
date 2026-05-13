@@ -1,7 +1,7 @@
 {
   "name": "tropymd",
   "productName": "Tropy.md",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Export Tropy items as Markdown files (one per item) with YAML frontmatter, suitable for Obsidian and other Markdown editors.",
   "icon": "icon.svg",
   "main": "index.js",
@@ -79,7 +79,7 @@
       "type": "string",
       "label": "Filename pattern",
       "default": "tropy-{hash}-{slug}",
-      "hint": "Template for output filenames (`.md` is appended). Placeholders: {hash} 8-char content hash, {slug} short title (≤60 chars), {title} full slugified title, {date}, {type}, {creator}. Missing values collapse cleanly. Idempotency reads the `tropy_hash:` value from frontmatter, so any pattern works without breaking re-runs."
+      "hint": "Template for output filenames (`.md` is appended). Placeholders: {hash} 8-char content hash, {slug} short slugified title (≤60 chars), {title} full slugified title, {name} human-readable title with case and spaces preserved (filesystem-illegal characters stripped), {date}, {type}, {creator}. Missing values collapse cleanly. When two items would produce the same filename, the second and later get `(2)`, `(3)`, etc. suffixes. Idempotency reads the `tropy_hash:` value from frontmatter, so any pattern works without breaking re-runs."
     },
     {
       "field": "embedPhotos",

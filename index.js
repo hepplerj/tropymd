@@ -1,6 +1,6 @@
 'use strict'
 
-// Tropy.md — v1.1.1
+// Tropy.md — v1.2.0
 //
 // Exports each selected Tropy item to its own Markdown file in a chosen
 // directory. Markdown-editor neutral by default — no wiki-links, no opinionated
@@ -156,6 +156,27 @@ function slugify(s, maxLen = 60) {
     .replace(/^-+|-+$/g, '')
 }
 
+function sanitizeFilename(s, maxLen = 150) {
+  // Produces a filesystem-safe but human-readable filename component:
+  // case and spaces preserved, only the characters that confuse Windows,
+  // macOS, or Obsidian's wiki-link parser are stripped. Suitable for
+  // titles like "The Sagebrush Rebellion" — the result reads naturally
+  // in a vault while still being a valid filename on every common OS.
+  return String(s || '')
+    // Filesystem-illegal everywhere: < > : " / \ | ? * and control chars.
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, '')
+    // Stripped to keep Obsidian's wiki-link parser happy: # ^ [ ].
+    .replace(/[#^[\]]/g, '')
+    // Collapse runs of whitespace.
+    .replace(/\s+/g, ' ')
+    .trim()
+    // Trim trailing dots — Windows treats "name." and "name" as the same.
+    .replace(/\.+$/, '')
+    .trim()
+    .slice(0, maxLen)
+    .trim()
+}
+
 function shortHash(item) {
   // Hash a content fingerprint built from the whole item, not just the first
   // photo's checksum. Tropy can ship `checksum: "d41d8cd9..."` (md5 of empty
@@ -182,28 +203,36 @@ function shortHash(item) {
 }
 
 function applyFilenamePattern(pattern, vars) {
-  // Substitutes {key} placeholders. Missing/empty values render as empty,
-  // and the result is then cleaned of double-hyphens / leading-trailing
-  // hyphens so a missing piece doesn't leave a stray separator.
+  // Substitutes {key} placeholders with values from `vars`. Values are
+  // expected to be pre-formatted (slugified or sanitized as appropriate
+  // for that variable). Missing/empty values render as empty; the result
+  // is then cleaned of double-hyphens and leading/trailing hyphens or
+  // whitespace so a missing piece doesn't leave a stray separator.
   let out = String(pattern || '').replace(/\{(\w+)\}/g, (_, k) => {
     const v = vars[k]
-    return v == null ? '' : slugify(v, 1000)
+    return v == null ? '' : String(v)
   })
   out = out
     .replace(/-{2,}/g, '-')
-    .replace(/^-+|-+$/g, '')
+    .replace(/^[-\s]+|[-\s]+$/g, '')
     .trim()
   return out
 }
 
 function filenameFor(item, hash, opts) {
+  // Variables come in two flavors: slug-style (lowercase + hyphens, safe
+  // for any filesystem and any URL) and human-readable (case + spaces
+  // preserved via sanitizeFilename). Pattern authors choose between them
+  // by picking the right placeholder name.
+  const title = item.title || ''
   const vars = {
     hash,
-    slug: slugify(item.title),
-    title: slugify(item.title, 1000),
-    date: item.date || '',
-    type: item.type || '',
-    creator: item.creator || ''
+    slug:    slugify(title),
+    title:   slugify(title, 1000),
+    name:    sanitizeFilename(title),
+    date:    item.date || '',
+    type:    item.type ? slugify(item.type, 1000) : '',
+    creator: slugify(item.creator || '', 1000)
   }
   const stem = applyFilenamePattern(opts.filenamePattern, vars)
     || `tropy-${hash}`  // fallback if pattern collapses to empty
@@ -545,6 +574,20 @@ class MarkdownPlugin {
     return dir || null
   }
 
+  async existingFilenames(outDir) {
+    // Returns a case-insensitive Set of filenames already in the output
+    // directory. Used to resolve filename collisions when two items would
+    // otherwise want the same name (e.g. two articles titled "The
+    // Sagebrush Rebellion" from different sources, both rendered with
+    // the human-readable {name} placeholder).
+    try {
+      const files = await fs.readdir(outDir)
+      return new Set(files.map(f => f.toLowerCase()))
+    } catch {
+      return new Set()
+    }
+  }
+
   async existingHashes(outDir) {
     // Reads the `tropy_hash:` value out of each existing .md file's
     // frontmatter. This is robust to any filename pattern the user has
@@ -636,6 +679,7 @@ class MarkdownPlugin {
 
     const opts = this.buildOpts()
     const seen = await this.existingHashes(outDir)
+    const usedNames = await this.existingFilenames(outDir)
     let wrote = 0
     let skipped = 0
     let failed = 0
@@ -658,7 +702,22 @@ class MarkdownPlugin {
           continue
         }
         const md = assembleMarkdown(item, hash, opts)
-        const target = path.join(outDir, filenameFor(item, hash, opts))
+        // Resolve filename collisions: if the computed filename already
+        // exists in the output directory (or has been used earlier in
+        // this batch), append `(2)`, `(3)`, etc. until unique. Matches
+        // the OS-level rename behavior users already recognize.
+        let candidate = filenameFor(item, hash, opts)
+        if (usedNames.has(candidate.toLowerCase())) {
+          const stem = candidate.replace(/\.md$/, '')
+          let n = 2
+          do {
+            candidate = `${stem} (${n}).md`
+            n++
+          } while (usedNames.has(candidate.toLowerCase()))
+        }
+        usedNames.add(candidate.toLowerCase())
+
+        const target = path.join(outDir, candidate)
         await fs.writeFile(target, md, 'utf8')
         seen.add(hash)
         wrote++
@@ -698,6 +757,7 @@ module.exports._internals = {
   renameYamlKey,
   dispatchTags,
   slugify,
+  sanitizeFilename,
   shortHash,
   filenameFor,
   applyFilenamePattern,
