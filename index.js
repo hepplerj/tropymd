@@ -1,6 +1,6 @@
 'use strict'
 
-// Tropy.md — v1.2.0
+// Tropy.md — v1.3.0
 //
 // Exports each selected Tropy item to its own Markdown file in a chosen
 // directory. Markdown-editor neutral by default — no wiki-links, no opinionated
@@ -330,6 +330,49 @@ function extractPhotoPaths(item) {
   return photos.map(p => (p && p.path) || '').filter(Boolean)
 }
 
+function buildItemIdIndex(state) {
+  // Builds a Map<photoPath, itemId> from Tropy's Redux store so we can
+  // recover the internal item ID for a JSON-LD item — the export hook
+  // doesn't surface item IDs anywhere in its payload, but the store knows
+  // them. Matching on first-photo path is reliable: paths are unique per
+  // item and stable across exports (unlike checksums, which Tropy
+  // sometimes ships as md5-of-empty-string when it hasn't fully processed
+  // an import).
+  const items = (state && state.items) || {}
+  const photos = (state && state.photos) || {}
+  const index = new Map()
+  for (const item of Object.values(items)) {
+    const photoIds = (item && item.photos) || []
+    if (photoIds.length === 0) continue
+    const firstPhoto = photos[photoIds[0]]
+    if (firstPhoto && firstPhoto.path) {
+      index.set(firstPhoto.path, item.id)
+    }
+  }
+  return index
+}
+
+function tropyUrlFor(item, state, itemIndex) {
+  // Returns a `tropy://project/current/items/<itemId>/<photoId>` URL when
+  // we can recover the internal IDs from the store, or null otherwise.
+  // The plugin emits the URL into the frontmatter as `tropy_url:` when
+  // present so users can click back into Tropy from their Markdown editor.
+  if (!itemIndex || !state) return null
+  const photos = Array.isArray(item.photo) ? item.photo : []
+  if (photos.length === 0 || !photos[0] || !photos[0].path) return null
+  const itemId = itemIndex.get(photos[0].path)
+  if (itemId == null) return null
+  const storeItem = state.items && state.items[itemId]
+  if (!storeItem) return `tropy://project/current/items/${itemId}`
+  // Prefer cover_image_id when set (rare in practice); otherwise the
+  // first photo in the item's photos array — matches the Python script.
+  const coverId = storeItem.cover_image_id != null
+    ? storeItem.cover_image_id
+    : (Array.isArray(storeItem.photos) ? storeItem.photos[0] : null)
+  if (coverId == null) return `tropy://project/current/items/${itemId}`
+  return `tropy://project/current/items/${itemId}/${coverId}`
+}
+
 function photoEmbedMarkdown(photo) {
   // Returns a Markdown embed line for a photo, or null if the photo has
   // no path. Format:
@@ -433,6 +476,12 @@ function buildFrontmatter(item, hash, opts) {
       if (item[part]) lines.push(`${k(part)}: ${yamlScalar(item[part])}`)
     }
   }
+
+  // Tropy deep-link back to the source item. Constructed from internal
+  // IDs recovered via the Redux store; null when the lookup fails (e.g.
+  // running against a Tropy version with a different store shape).
+  const tropyUrl = tropyUrlFor(item, opts.state, opts.itemIndex)
+  if (tropyUrl) lines.push(`${k('tropy_url')}: ${yamlScalar(tropyUrl)}`)
 
   // Custom template properties — anything else on the item that isn't
   // structural or already rendered. Lets users with custom Tropy templates
@@ -626,19 +675,23 @@ class MarkdownPlugin {
   }
 
   buildOpts() {
-    // Pull Tropy's ontology if available so we can resolve custom-property
-    // URIs to human-readable labels. Older Tropy versions or different
-    // store shapes degrade gracefully — `ontologyLabel` returns null when
-    // a lookup fails.
-    let ontology = null
+    // Pull Tropy's ontology + items/photos index from the Redux store. The
+    // ontology gives us human-readable labels for custom-property URIs;
+    // the index lets us recover internal item IDs (not in the JSON-LD
+    // payload) so we can build `tropy://` URLs back to each item. Older
+    // Tropy versions or different store shapes degrade gracefully — both
+    // lookups return null on any failure and the rest of the plugin
+    // adjusts.
+    let state = null
     try {
-      const state = this.context.window && this.context.window.store
+      state = this.context.window && this.context.window.store
         ? this.context.window.store.getState()
         : null
-      ontology = (state && state.ontology) || null
     } catch {
-      ontology = null
+      state = null
     }
+    const ontology = (state && state.ontology) || null
+    const itemIndex = state ? buildItemIdIndex(state) : null
 
     return {
       workflowTags: parseCsvSet(this.options.workflowTags),
@@ -650,7 +703,9 @@ class MarkdownPlugin {
       filenamePattern: this.options.filenamePattern || 'tropy-{hash}-{slug}',
       embedPhotos: this.options.embedPhotos === true,
       fieldRename: parseFieldRename(this.options.fieldRename),
-      ontology
+      ontology,
+      state,
+      itemIndex
     }
   }
 
@@ -769,6 +824,8 @@ module.exports._internals = {
   extractPages,
   extractPhotoPaths,
   photoEmbedMarkdown,
+  buildItemIdIndex,
+  tropyUrlFor,
   localName,
   looksLikeUri,
   ontologyLabel,

@@ -238,6 +238,7 @@ publication: ""
 date: "1907-10-15"
 doc_type: "letter"
 source: "Library of Congress, Gifford Pinchot Papers, Box 12, Folder 3"
+tropy_url: "tropy://project/current/items/14410/14411"
 people:
   - "[[Gifford Pinchot]]"
   - "[[Theodore Roosevelt]]"
@@ -280,6 +281,20 @@ defined, the YAML key uses the label (e.g. "Grant Number"). If no label
 is found, the key falls back to the URI's local name. **Collisions across
 namespaces are still possible** when two distinct URIs share the same
 local name and neither has an ontology label.
+
+## Tropy deep links
+
+Each exported file's frontmatter includes a `tropy_url:` field with a
+`tropy://project/current/items/<id>/<photo>` URL that, when clicked,
+opens Tropy to that item with its cover photo selected. Useful for
+jumping back to the source scan from inside your Markdown editor —
+particularly when reviewing a transcription against the original.
+
+The plugin recovers Tropy's internal item ID from the live project
+state (Tropy's JSON-LD export doesn't include it directly). If the
+state isn't accessible for any reason — e.g. an older Tropy version
+with a different store shape — the field is simply omitted; nothing
+else in the export is affected.
 
 ## Idempotency
 
